@@ -416,7 +416,7 @@ async def update_sensors_chart(vue: PyEmVue, start: datetime, end: datetime, sca
                     usage_dict = await loop.run_in_executor(
                         None, vue.get_chart_usage, channel, start, end, scale
                     )
-                    _LOGGER.warning("Got usage dict probably")
+                    _LOGGER.warning("Got usage dict probably: %s", usage_dict)
                     if not usage_dict:
                         _LOGGER.warning(
                             "No channels found during update for scale %s. Retrying", scale
