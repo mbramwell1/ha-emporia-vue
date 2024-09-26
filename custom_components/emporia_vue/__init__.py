@@ -473,7 +473,7 @@ def flatten_usage_data(
 
 
 async def parse_flattened_usage_data(
-    flattened_data: dict[str, VueDeviceChannelUsage],
+    flattened_data: dict[str, str],
     scale: str,
     data: dict[str, Any],
     requested_time: datetime,
@@ -517,7 +517,7 @@ async def parse_flattened_usage_data(
 
             # Fix the usage if we got None
             # Use the last value if we have it, otherwise use zero
-            fixed_usage = channel.usage if channel else 0
+            fixed_usage = channel if channel else 0
             if fixed_usage is None:
                 fixed_usage = handle_none_usage(scale, identifier)
                 _LOGGER.info(
