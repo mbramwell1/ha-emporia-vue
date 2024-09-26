@@ -130,6 +130,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             """
             now = datetime.now(UTC)
             now_minus_1_min = now - timedelta(hours=0, minutes=1)
+            _LOGGER.warning("Getting minute updates")
             data = await update_sensors_chart(vue, now_minus_1_min, now, [Scale.MINUTE.value])
             # store this, then have the daily sensors pull from it and integrate
             # then the daily can "true up" hourly (or more frequent) in case it's incorrect
@@ -406,8 +407,11 @@ async def update_sensors_chart(vue: PyEmVue, start: datetime, end: datetime, sca
         # handled by the data update coordinator.
         data = {}
         loop = asyncio.get_event_loop()
+        _LOGGER.warning("starting looping devices")
         for vueDevice in DEVICE_INFORMATION.values():
+            _LOGGER.warning("Looped Device: %s", vueDevice)
             for channel in vueDevice.channels:
+                _LOGGER.warning("Channel: %s", channel)
                 for scale in scales:
                     usage_dict = await loop.run_in_executor(
                         None, vue.get_chart_usage, channel, start, end, scale
