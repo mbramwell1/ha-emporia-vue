@@ -364,41 +364,41 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def update_sensors(vue: PyEmVue, scales: list[str]):
-    """Fetch data from API endpoint."""
-    try:
-        # Note: asyncio.TimeoutError and aiohttp.ClientError are already
-        # handled by the data update coordinator.
-        data = {}
-        loop = asyncio.get_event_loop()
-        for scale in scales:
-            utcnow = datetime.now(UTC)
-            usage_dict = await loop.run_in_executor(
-                None, vue.get_device_list_usage, DEVICE_GIDS, utcnow, scale
-            )
-            if not usage_dict:
-                _LOGGER.warning(
-                    "No channels found during update for scale %s. Retrying", scale
-                )
-                usage_dict = await loop.run_in_executor(
-                    None, vue.get_device_list_usage, DEVICE_GIDS, utcnow, scale
-                )
-            if usage_dict:
-                flattened, data_time = flatten_usage_data(usage_dict, scale)
-                await parse_flattened_usage_data(
-                    flattened,
-                    scale,
-                    data,
-                    utcnow,
-                    data_time,
-                )
-            else:
-                raise UpdateFailed(f"No channels found during update for scale {scale}")
-
-        return data
-    except Exception as err:
-        _LOGGER.error("Error communicating with Emporia API: %s", err)
-        raise UpdateFailed(f"Error communicating with Emporia API: {err}") from err
+# async def update_sensors(vue: PyEmVue, scales: list[str]):
+#     """Fetch data from API endpoint."""
+#     try:
+#         # Note: asyncio.TimeoutError and aiohttp.ClientError are already
+#         # handled by the data update coordinator.
+#         data = {}
+#         loop = asyncio.get_event_loop()
+#         for scale in scales:
+#             utcnow = datetime.now(UTC)
+#             usage_dict = await loop.run_in_executor(
+#                 None, vue.get_device_list_usage, DEVICE_GIDS, utcnow, scale
+#             )
+#             if not usage_dict:
+#                 _LOGGER.warning(
+#                     "No channels found during update for scale %s. Retrying", scale
+#                 )
+#                 usage_dict = await loop.run_in_executor(
+#                     None, vue.get_device_list_usage, DEVICE_GIDS, utcnow, scale
+#                 )
+#             if usage_dict:
+#                 flattened, data_time = flatten_usage_data(usage_dict, scale)
+#                 await parse_flattened_usage_data(
+#                     flattened,
+#                     scale,
+#                     data,
+#                     utcnow,
+#                     data_time,
+#                 )
+#             else:
+#                 raise UpdateFailed(f"No channels found during update for scale {scale}")
+#
+#         return data
+#     except Exception as err:
+#         _LOGGER.error("Error communicating with Emporia API: %s", err)
+#         raise UpdateFailed(f"Error communicating with Emporia API: {err}") from err
 
 async def update_sensors_chart(vue: PyEmVue, start: datetime, end: datetime, scales: list[str]):
     """Fetch data from API endpoint."""
@@ -427,7 +427,7 @@ async def update_sensors_chart(vue: PyEmVue, start: datetime, end: datetime, sca
                     if usage_dict:
                         _LOGGER.warning("Usage Data: %s", usage_dict)
                         _LOGGER.warning("Flattening Data")
-                        flattened, data_time = flatten_usage_data(usage_dict, scale)
+                        flattened, data_time = flatten_usage_data(channel, usage_dict, scale)
                         await parse_flattened_usage_data(
                             flattened,
                             scale,
@@ -444,23 +444,31 @@ async def update_sensors_chart(vue: PyEmVue, start: datetime, end: datetime, sca
         raise UpdateFailed(f"Error communicating with Emporia API: {err}") from err
 
 def flatten_usage_data(
+    channel: str,
     usage_devices: dict[int, VueUsageDevice],
     scale: str,
 ) -> tuple[dict[str, VueDeviceChannelUsage], datetime]:
     """Flattens the raw usage data into a dictionary of channel ids and usage info."""
     flattened: dict[str, VueDeviceChannelUsage] = {}
     data_time: datetime = datetime.now(UTC)
-    for usage in usage_devices.values():
-        data_time = usage.timestamp or data_time
-        if usage.channels:
-            for channel in usage.channels.values():
-                identifier = make_channel_id(channel, scale)
-                flattened[identifier] = channel
-                if channel.nested_devices:
-                    nested_flattened, _ = flatten_usage_data(
-                        channel.nested_devices, scale
-                    )
-                    flattened.update(nested_flattened)
+    _LOGGER.info("Channel: %s", channel)
+    _LOGGER.info("Usage Devices: %s", usage_devices)
+    _LOGGER.info("Usage Devices vals: %s", usage_devices[0])
+    _LOGGER.info("Usage Devices vals: %s", usage_devices[1])
+    identifier = make_channel_id(channel, scale)
+    flattened[identifier] = channel
+
+    # for usage in usage_devices.values():
+    #     data_time = usage.timestamp or data_time
+    #     if usage.channels:
+    #         for channel in usage.channels.values():
+    #             identifier = make_channel_id(channel, scale)
+    #             flattened[identifier] = channel
+    #             if channel.nested_devices:
+    #                 nested_flattened, _ = flatten_usage_data(
+    #                     channel.nested_devices, scale
+    #                 )
+    #                 flattened.update(nested_flattened)
     return (flattened, data_time)
 
 
