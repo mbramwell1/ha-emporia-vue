@@ -128,7 +128,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             This is the place to pre-process the data to lookup tables
             so entities can quickly look up their data.
             """
-            data = await update_sensors(vue, [Scale.MINUTE.value])
+            now = datetime.now(UTC)
+            now_minus_1_min = now - timedelta(hours=0, minutes=1)
+            data = await update_sensors_chart(vue, now_minus_1_min, now, [Scale.MINUTE.value])
             # store this, then have the daily sensors pull from it and integrate
             # then the daily can "true up" hourly (or more frequent) in case it's incorrect
             if data:
@@ -142,7 +144,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             This is the place to pre-process the data to lookup tables
             so entities can quickly look up their data.
             """
-            return await update_sensors(vue, [Scale.MONTH.value])
+            now = datetime.now(UTC)
+            now_minus_1_month = now - timedelta(days=31, hours=0, minutes=0)
+            return await update_sensors_chart(vue, now_minus_1_month, now, [Scale.MONTH.value])
 
         async def async_update_day_sensors():
             global LAST_DAY_UPDATE
@@ -151,7 +155,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if not LAST_DAY_UPDATE or (now - LAST_DAY_UPDATE) > timedelta(minutes=15):
                 _LOGGER.info("Updating day sensors")
                 LAST_DAY_UPDATE = now
-                LAST_DAY_DATA = await update_sensors(vue, [Scale.DAY.value])
+                now = datetime.now(UTC)
+                now_minus_1_day = now - timedelta(hours=24, minutes=0)
+                LAST_DAY_DATA = await update_sensors_chart(vue, now_minus_1_day, now, [Scale.DAY.value])
             else:
                 # integrate the minute data
                 _LOGGER.info("Integrating minute data into day sensors")
@@ -393,6 +399,42 @@ async def update_sensors(vue: PyEmVue, scales: list[str]):
         _LOGGER.error("Error communicating with Emporia API: %s", err)
         raise UpdateFailed(f"Error communicating with Emporia API: {err}") from err
 
+async def update_sensors_chart(vue: PyEmVue, start: datetime, end: datetime, scales: list[str]):
+    """Fetch data from API endpoint."""
+    try:
+        # Note: asyncio.TimeoutError and aiohttp.ClientError are already
+        # handled by the data update coordinator.
+        data = {}
+        loop = asyncio.get_event_loop()
+        for vueDevice in DEVICE_INFORMATION.values():
+            for channel in vueDevice.channels:
+                for scale in scales:
+                    usage_dict = await loop.run_in_executor(
+                        None, vue.get_chart_usage, channel, start, end, scale
+                    )
+                    if not usage_dict:
+                        _LOGGER.warning(
+                            "No channels found during update for scale %s. Retrying", scale
+                        )
+                        usage_dict = await loop.run_in_executor(
+                            None, vue.get_chart_usage, channel, start, end, scale
+                        )
+                    if usage_dict:
+                        flattened, data_time = flatten_usage_data(usage_dict, scale)
+                        await parse_flattened_usage_data(
+                            flattened,
+                            scale,
+                            data,
+                            end,
+                            data_time,
+                        )
+                    else:
+                        raise UpdateFailed(f"No channels found during update for scale {scale}")
+
+        return data
+    except Exception as err:
+        _LOGGER.error("Error communicating with Emporia API: %s", err)
+        raise UpdateFailed(f"Error communicating with Emporia API: {err}") from err
 
 def flatten_usage_data(
     usage_devices: dict[int, VueUsageDevice],
