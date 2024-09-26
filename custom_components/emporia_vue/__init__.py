@@ -451,10 +451,10 @@ def flatten_usage_data(
     """Flattens the raw usage data into a dictionary of channel ids and usage info."""
     flattened: dict[str, VueDeviceChannelUsage] = {}
     data_time: datetime = datetime.now(UTC)
-    _LOGGER.info("Channel: %s", channel)
-    _LOGGER.info("Usage Devices: %s", usage_devices)
-    _LOGGER.info("Usage Devices vals: %s", usage_devices[0])
-    _LOGGER.info("Usage Devices vals: %s", usage_devices[1])
+    _LOGGER.warning("Channel: %s", channel)
+    _LOGGER.warning("Usage Devices: %s", usage_devices)
+    _LOGGER.warning("Usage Devices vals: %s", usage_devices[0])
+    _LOGGER.warning("Usage Devices vals: %s", usage_devices[1])
     identifier = make_channel_id(channel, scale)
     flattened[identifier] = channel
 
