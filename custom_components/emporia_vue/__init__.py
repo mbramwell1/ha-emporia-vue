@@ -444,19 +444,19 @@ async def update_sensors_chart(vue: PyEmVue, start: datetime, end: datetime, sca
         raise UpdateFailed(f"Error communicating with Emporia API: {err}") from err
 
 def flatten_usage_data(
-    channel: str,
+    channel: VueDeviceChannel,
     usage_devices: dict[int, VueUsageDevice],
     scale: str,
 ) -> tuple[dict[str, VueDeviceChannelUsage], datetime]:
     """Flattens the raw usage data into a dictionary of channel ids and usage info."""
-    flattened: dict[str, VueDeviceChannelUsage] = {}
+    flattened: dict[str, str] = {}
     data_time: datetime = datetime.now(UTC)
-    _LOGGER.warning("Channel: %s", channel)
+    _LOGGER.warning("Channel: %s", channel.__dict__)
     _LOGGER.warning("Usage Devices: %s", usage_devices)
     _LOGGER.warning("Usage Devices vals: %s", usage_devices[0])
     _LOGGER.warning("Usage Devices vals: %s", usage_devices[1])
     identifier = make_channel_id(channel, scale)
-    flattened[identifier] = channel
+    flattened[identifier] = usage_devices[0][0]
 
     # for usage in usage_devices.values():
     #     data_time = usage.timestamp or data_time
