@@ -425,7 +425,7 @@ async def update_sensors_chart(vue: PyEmVue, start: datetime, end: datetime, sca
                             None, vue.get_chart_usage, channel, start, end, scale
                         )
                     if usage_dict:
-                        _LOGGER.warning("Usage Data: %s", usage_dict.__dict__)
+                        _LOGGER.warning("Usage Data: %s", usage_dict)
                         _LOGGER.warning("Flattening Data")
                         flattened, data_time = flatten_usage_data(usage_dict, scale)
                         await parse_flattened_usage_data(
